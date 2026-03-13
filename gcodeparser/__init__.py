@@ -1,5 +1,5 @@
 __version__ = "0.3.0"
-__all__ = ["parse_gcode_lines", "GcodeParser", "GcodeLine", "Commands", "infer_element_type", "parse_parameters"]
+__all__ = ["parse_gcode_lines", "serialize_gcode_lines", "get_stats", "GcodeStats", "GcodeParser", "GcodeLine", "Commands", "infer_element_type", "parse_parameters"]
 
 import io
 import re
@@ -39,9 +39,10 @@ class GcodeParser:
 
 class Commands(Enum):
     COMMENT = 0
-    MOVE = 1
-    OTHER = 2
-    TOOLCHANGE = 3
+    RAPID_MOVE = 1
+    MOVE = 2
+    OTHER = 3
+    TOOLCHANGE = 4
 
 
 @dataclass
@@ -53,7 +54,9 @@ class GcodeLine:
     type: Commands = field(init=False)
 
     def __post_init__(self):
-        if self.command[0] == "G" and self.command[1] in (0, 1, 2, 3):
+        if self.command[0] == "G" and self.command[1] == 0:
+            self.type = Commands.RAPID_MOVE
+        elif self.command[0] == "G" and self.command[1] in (1, 2, 3):
             self.type = Commands.MOVE
         elif self.command[0] == ";":
             self.type = Commands.COMMENT
@@ -227,3 +230,108 @@ def parse_parameters(line: str) -> dict[str, float | str | bool]:
         params[element[0].upper()] = element_type(element[1])
 
     return params
+
+
+@dataclass
+class GcodeStats:
+    """
+    Summary statistics for a parsed G-code file.
+
+    Attributes:
+        total_lines:   Total number of parsed GcodeLine objects.
+        counts:        Number of lines per Commands type.
+        min_x, max_x:  Bounding box X range across all move commands (or None if no moves).
+        min_y, max_y:  Bounding box Y range.
+        min_z, max_z:  Bounding box Z range.
+        total_extrusion: Sum of all E parameter values (mm of filament).
+    """
+    total_lines: int
+    counts: dict[str, int]
+    min_x: float | None
+    max_x: float | None
+    min_y: float | None
+    max_y: float | None
+    min_z: float | None
+    max_z: float | None
+    total_extrusion: float
+
+    def __str__(self) -> str:
+        lines = [f"Total lines : {self.total_lines}"]
+        for name, count in sorted(self.counts.items()):
+            lines.append(f"  {name:<12}: {count}")
+        if self.min_x is not None:
+            lines.append(f"Bounding box:")
+            lines.append(f"  X: [{self.min_x:.3f}, {self.max_x:.3f}]")
+            lines.append(f"  Y: [{self.min_y:.3f}, {self.max_y:.3f}]")
+            lines.append(f"  Z: [{self.min_z:.3f}, {self.max_z:.3f}]")
+        lines.append(f"Total extrusion: {self.total_extrusion:.4f} mm")
+        return "\n".join(lines)
+
+
+def get_stats(lines: list["GcodeLine"]) -> GcodeStats:
+    """
+    Compute summary statistics from a list of GcodeLine objects.
+
+    Args:
+        lines: List of parsed GcodeLine objects.
+
+    Returns:
+        A GcodeStats dataclass with counts, bounding box, and extrusion info.
+    """
+    from collections import Counter
+    counts: Counter[str] = Counter(l.type.name for l in lines)
+
+    xs, ys, zs = [], [], []
+    total_extrusion = 0.0
+
+    for l in lines:
+        if l.type in (Commands.MOVE, Commands.RAPID_MOVE):
+            x = l.get_param("X")
+            y = l.get_param("Y")
+            z = l.get_param("Z")
+            e = l.get_param("E")
+            if x is not None:
+                xs.append(float(x))
+            if y is not None:
+                ys.append(float(y))
+            if z is not None:
+                zs.append(float(z))
+            if e is not None:
+                total_extrusion += float(e)
+
+    return GcodeStats(
+        total_lines=len(lines),
+        counts=dict(counts),
+        min_x=min(xs) if xs else None,
+        max_x=max(xs) if xs else None,
+        min_y=min(ys) if ys else None,
+        max_y=max(ys) if ys else None,
+        min_z=min(zs) if zs else None,
+        max_z=max(zs) if zs else None,
+        total_extrusion=total_extrusion,
+    )
+
+
+def serialize_gcode_lines(
+    lines: Iterator[GcodeLine] | list[GcodeLine],
+    output: io.TextIOBase | io.StringIO | None = None,
+) -> str | None:
+    """
+    Serialize an iterable of GcodeLine objects back into a G-code string or write to a file-like object.
+
+    Args:
+        lines: Iterable of GcodeLine objects to serialize
+        output: Optional file-like object to write to. If None, returns a string.
+
+    Returns:
+        A G-code string if output is None, otherwise None (writes to output).
+    """
+    if output is not None:
+        for line in lines:
+            output.write(line.gcode_str + "\n")
+        return None
+
+    result = io.StringIO()
+    for line in lines:
+        result.write(line.gcode_str + "\n")
+    return result.getvalue()

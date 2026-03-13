@@ -1,6 +1,16 @@
 from gcodeparser import Commands, GcodeLine
 
 
+def test_post_init_rapid_move():
+    line = GcodeLine(
+        command=("G", 0),
+        params={"X": 10, "Y": 20},
+        comment="this is a comment",
+        line_index=0,
+    )
+    assert line.type == Commands.RAPID_MOVE
+
+
 def test_post_init_move():
     line = GcodeLine(
         command=("G", 1),

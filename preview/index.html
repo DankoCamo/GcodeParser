@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CAMOutput G-Code Optimizer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page">
+    <header class="topbar card glass">
+      <div class="brand">
+        <div class="logo">⚙</div>
+        <div>
+          <h1>CAMOutput G-Code Optimizer</h1>
+          <p>Uploadaj G-code i generiraj optimiziranu verziju u jednom kliku.</p>
+        </div>
+      </div>
+      <button id="downloadBtn" class="btn primary" disabled>Download Optimized</button>
+    </header>
+
+    <section class="layout">
+      <section class="left-col">
+        <div class="card panel">
+          <h2>Machine Configuration</h2>
+          <div class="field-grid">
+            <label class="field">
+              <span>Machine Model</span>
+              <select id="machineModel">
+                <option>Generic / Custom</option>
+                <option>3-Axis CNC Mill</option>
+                <option>Router</option>
+                <option>Laser Engraver</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>CAM Program</span>
+              <select id="camProgram">
+                <option>Generic / Unknown</option>
+                <option>Fusion 360</option>
+                <option>Mastercam</option>
+                <option>SolidCAM</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Control Unit</span>
+              <select id="controlUnit">
+                <option>Generic / Unknown</option>
+                <option>Fanuc</option>
+                <option>Siemens</option>
+                <option>Mach3 / Mach4</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="card panel">
+          <h2>Input</h2>
+          <div class="actions-row">
+            <label class="btn" for="fileInput">Upload File</label>
+            <button id="pasteDemoBtn" class="btn ghost">Paste Demo Code</button>
+          </div>
+          <input id="fileInput" type="file" accept=".gcode,.nc,.tap,.mpf,.txt" hidden>
+          <textarea id="sourceCode" spellcheck="false" hidden></textarea>
+
+          <label id="dropzone" class="dropzone" for="fileInput">
+            <strong>Drag & drop G-code datoteku</strong>
+            <span>Podržano: .nc, .gcode, .tap, .mpf, .txt</span>
+          </label>
+        </div>
+
+        <div class="card panel">
+          <h2>Output</h2>
+          <div class="compare-head">
+            <span>Original vs Optimized (bold = izmijenjeno)</span>
+          </div>
+          <div class="compare-grid">
+            <article class="code-pane">
+              <h3>Original</h3>
+              <pre id="sourcePreview" class="code-view"></pre>
+            </article>
+            <article class="code-pane">
+              <h3>Optimized</h3>
+              <pre id="optimizedPreview" class="code-view"></pre>
+            </article>
+          </div>
+          <textarea id="optimizedCode" spellcheck="false" readonly hidden></textarea>
+        </div>
+      </section>
+
+      <aside class="card panel right-col">
+        <h2>Optimization Options</h2>
+
+        <div class="option-block">
+          <div class="option-head">
+            <label for="feedScale">Feed Rate Scale (F)</label>
+            <output id="feedScaleOut">100%</output>
+          </div>
+          <input id="feedScale" type="range" min="10" max="200" value="100">
+        </div>
+
+        <div class="option-block">
+          <div class="option-head">
+            <label for="spindleScale">Spindle Speed Scale (S)</label>
+            <output id="spindleScaleOut">100%</output>
+          </div>
+          <input id="spindleScale" type="range" min="10" max="200" value="100">
+        </div>
+
+        <label class="toggle"><input id="removeRedundantMoves" type="checkbox" checked><span>Remove Redundant Moves</span></label>
+        <label class="toggle"><input id="optimizeRapidTraverse" type="checkbox" checked><span>Optimize Rapid Traverse</span></label>
+        <label class="toggle"><input id="smoothRapidTraverses" type="checkbox" checked><span>Smooth Rapid Traverses</span></label>
+        <label class="toggle"><input id="removeComments" type="checkbox" checked><span>Remove Comments & Empty Lines</span></label>
+        <label class="toggle"><input id="normalizeFeedRates" type="checkbox" checked><span>Normalize Feed Rates</span></label>
+        <label class="toggle"><input id="removeDuplicateCoordinates" type="checkbox" checked><span>Remove Duplicate Coordinates</span></label>
+
+        <button id="optimizeBtn" class="btn primary full">Optimize Now</button>
+
+        <div class="stats-grid">
+          <article class="mini-stat">
+            <h3>Original</h3>
+            <p id="originalStats">-</p>
+          </article>
+          <article class="mini-stat">
+            <h3>Optimized</h3>
+            <p id="optimizedStats">-</p>
+          </article>
+          <article class="mini-stat accent">
+            <h3>Reduction</h3>
+            <p id="reductionStats">-</p>
+          </article>
+          <article class="mini-stat">
+            <h3>Changes</h3>
+            <p id="changesStats">-</p>
+          </article>
+          <article class="mini-stat">
+            <h3>Estimated Time Original</h3>
+            <p id="originalTimeStats">-</p>
+          </article>
+          <article class="mini-stat">
+            <h3>Estimated Time Optimized</h3>
+            <p id="optimizedTimeStats">-</p>
+          </article>
+          <article class="mini-stat accent">
+            <h3>Time Saved (Machining)</h3>
+            <p id="timeSavedStats">-</p>
+          </article>
+        </div>
+
+        <p class="footnote">Napomena: "Optimize Rapid Traverse" koristi konzervativnu heuristiku na uzastopnim G0 točkama.</p>
+      </aside>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
