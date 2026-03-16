@@ -8,6 +8,10 @@ const els = {
   pasteDemoBtn: document.getElementById("pasteDemoBtn"),
   optimizeBtn: document.getElementById("optimizeBtn"),
   downloadBtn: document.getElementById("downloadBtn"),
+  copyBtn: document.getElementById("copyBtn"),
+  csvBtn: document.getElementById("csvBtn"),
+  reportBtn: document.getElementById("reportBtn"),
+  engineStatus: document.getElementById("engineStatus"),
   originalStats: document.getElementById("originalStats"),
   optimizedStats: document.getElementById("optimizedStats"),
   reductionStats: document.getElementById("reductionStats"),
@@ -15,6 +19,21 @@ const els = {
   originalTimeStats: document.getElementById("originalTimeStats"),
   optimizedTimeStats: document.getElementById("optimizedTimeStats"),
   timeSavedStats: document.getElementById("timeSavedStats"),
+  rapidBreakdownStats: document.getElementById("rapidBreakdownStats"),
+  cuttingBreakdownStats: document.getElementById("cuttingBreakdownStats"),
+  overheadBreakdownStats: document.getElementById("overheadBreakdownStats"),
+  moneySavedStats: document.getElementById("moneySavedStats"),
+  moneyDailyStats: document.getElementById("moneyDailyStats"),
+  moneyMonthlyStats: document.getElementById("moneyMonthlyStats"),
+  moneyYearlyStats: document.getElementById("moneyYearlyStats"),
+  roiStats: document.getElementById("roiStats"),
+  optimizationMetricList: document.getElementById("optimizationMetricList"),
+  warningCount: document.getElementById("warningCount"),
+  warningList: document.getElementById("warningList"),
+  optimizationMode: document.getElementById("optimizationMode"),
+  machineRate: document.getElementById("machineRate"),
+  jobsPerDay: document.getElementById("jobsPerDay"),
+  workDaysPerMonth: document.getElementById("workDaysPerMonth"),
   feedScale: document.getElementById("feedScale"),
   spindleScale: document.getElementById("spindleScale"),
   feedScaleOut: document.getElementById("feedScaleOut"),
@@ -26,6 +45,69 @@ const els = {
   normalizeFeedRates: document.getElementById("normalizeFeedRates"),
   removeDuplicateCoordinates: document.getElementById("removeDuplicateCoordinates"),
 };
+
+const UI_BUILD = "v2026.03.13-3";
+console.log(`[CAMOutput] Loaded ${UI_BUILD}`);
+let renderSequence = 0;
+let lastRemovedEntries = [];
+let lastStats = null;
+
+function setEngineStatus(mode, detail = "") {
+  if (!els.engineStatus) {
+    return;
+  }
+  const label = mode === "fallback" ? "Engine: Fallback" : "Engine: API";
+  els.engineStatus.textContent = detail ? `${label} (${detail})` : label;
+  els.engineStatus.classList.toggle("fallback", mode === "fallback");
+}
+
+function renderWarnings(warnings) {
+  const entries = Array.isArray(warnings) ? warnings : [];
+  if (els.warningCount) {
+    els.warningCount.textContent = String(entries.length);
+  }
+  if (!els.warningList) {
+    return;
+  }
+  if (entries.length === 0) {
+    els.warningList.innerHTML = '<div class="warning-item ok">No warnings</div>';
+    return;
+  }
+  els.warningList.innerHTML = entries
+    .map((w) => {
+      const type = w && w.type === "critical" ? "critical" : "warning";
+      const line = Number.isFinite(w?.line) ? `L${w.line}` : "-";
+      const msg = escapeHtml(w?.message || "Warning");
+      return `<div class="warning-item ${type}"><span class="warning-line">${line}</span><span class="warning-msg">${msg}</span></div>`;
+    })
+    .join("");
+}
+
+function mountBuildBadge() {
+  if (document.getElementById("buildBadge")) return;
+  const badge = document.createElement("div");
+  badge.id = "buildBadge";
+  badge.textContent = `UI ${UI_BUILD}`;
+  badge.style.position = "fixed";
+  badge.style.left = "12px";
+  badge.style.bottom = "12px";
+  badge.style.padding = "6px 10px";
+  badge.style.borderRadius = "999px";
+  badge.style.font = "700 11px/1 Inter, sans-serif";
+  badge.style.letterSpacing = ".08em";
+  badge.style.background = "#ff3b30";
+  badge.style.color = "#fff";
+  badge.style.zIndex = "99999";
+  badge.style.pointerEvents = "none";
+  badge.style.boxShadow = "0 8px 24px rgba(255,59,48,.45)";
+  document.body.appendChild(badge);
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", mountBuildBadge, { once: true });
+} else {
+  mountBuildBadge();
+}
 
 function hasRequiredElements() {
   return Object.values(els).every((el) => el !== null);
@@ -65,6 +147,13 @@ function escapeHtml(text) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function formatCurrency(value) {
+  if (!Number.isFinite(value)) {
+    return "-";
+  }
+  return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(value);
 }
 
 function splitComment(line) {
@@ -456,17 +545,16 @@ function formatSeconds(totalSeconds) {
   if (!Number.isFinite(totalSeconds) || totalSeconds < 0) {
     return "-";
   }
-  const seconds = Math.round(totalSeconds);
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
   if (h > 0) {
-    return `${h}h ${m}m ${s}s`;
+    return `${h}h ${m}m ${s.toFixed(2)}s`;
   }
   if (m > 0) {
-    return `${m}m ${s}s`;
+    return `${m}m ${s.toFixed(2)}s`;
   }
-  return `${s}s`;
+  return `${s.toFixed(3)}s`;
 }
 
 function arcLengthXY(x0, y0, x1, y1, i, j, clockwise) {
@@ -633,10 +721,41 @@ function diffTokens(a, b) {
   };
 }
 
-function renderLineHtml(kind, lineNo, contentHtml) {
+function highlightGcodeHtml(line) {
+  const source = String(line || "");
+  const parts = source.split(/(\s+)/);
+  const transformed = parts.map((part) => {
+    if (!part || /^\s+$/.test(part)) {
+      return escapeHtml(part);
+    }
+    if (part.startsWith(";")) {
+      return `<span class="comment">${escapeHtml(part)}</span>`;
+    }
+    if (/^[GMT]\d+$/i.test(part)) {
+      return `<span class="cmd">${escapeHtml(part)}</span>`;
+    }
+    const m = part.match(/^([XYZFIJRSPEA])([+\-]?\d*\.?\d+)$/i);
+    if (m) {
+      return `<span class="axis">${escapeHtml(m[1])}</span><span class="num">${escapeHtml(m[2])}</span>`;
+    }
+    return escapeHtml(part);
+  });
+  return transformed.join("");
+}
+
+function renderLineHtml(kind, lineNo, contentHtml, emphasize = false) {
   const safeContent = contentHtml && contentHtml.length > 0 ? contentHtml : "&nbsp;";
   const numberHtml = lineNo > 0 ? `N${lineNo}` : "&nbsp;";
-  return `<span class="line ${kind}"><span class="line-no">${numberHtml}</span><span class="line-body">${safeContent}</span></span>`;
+  const emphasizeClass = emphasize ? "line-left-emphasis" : "";
+  return `<span class="line ${kind} ${emphasizeClass}"><span class="line-no">${numberHtml}</span><span class="line-body">${safeContent}</span></span>`;
+}
+
+function attachReason(html, reasonText) {
+  if (!reasonText) {
+    return html;
+  }
+  const safeReason = escapeHtml(reasonText);
+  return html.replace('class="line ', `data-reason="${safeReason}" class="line `);
 }
 
 function alignLines(sourceLines, optimizedLines) {
@@ -705,10 +824,18 @@ function alignLines(sourceLines, optimizedLines) {
   return merged;
 }
 
-function renderDiff(source, optimized) {
+function renderDiff(source, optimized, removedEntries = []) {
   const sourceLines = source.replace(/\r\n/g, "\n").split("\n");
   const optimizedLines = optimized.replace(/\r\n/g, "\n").split("\n");
   const rows = alignLines(sourceLines, optimizedLines);
+  const reasonByLine = new Map();
+  for (const entry of removedEntries) {
+    if (!entry || !Number.isFinite(entry.line)) {
+      continue;
+    }
+    const reason = Array.isArray(entry.reasons) ? entry.reasons.join("; ") : "Removed by optimizer";
+    reasonByLine.set(entry.line, reason);
+  }
 
   const srcHtml = [];
   const optHtml = [];
@@ -720,8 +847,8 @@ function renderDiff(source, optimized) {
     if (row.type === "same") {
       srcLineNo += 1;
       optLineNo += 1;
-      srcHtml.push(renderLineHtml("", srcLineNo, escapeHtml(row.src || "")));
-      optHtml.push(renderLineHtml("", optLineNo, escapeHtml(row.opt || "")));
+      srcHtml.push(renderLineHtml("", srcLineNo, highlightGcodeHtml(row.src || "")));
+      optHtml.push(renderLineHtml("", optLineNo, highlightGcodeHtml(row.opt || "")));
       continue;
     }
 
@@ -730,14 +857,16 @@ function renderDiff(source, optimized) {
       const tokenDiff = diffTokens(row.src || "", row.opt || "");
       srcLineNo += 1;
       optLineNo += 1;
-      srcHtml.push(renderLineHtml("changed", srcLineNo, tokenDiff.aHtml || " "));
+      const leftHtml = renderLineHtml("changed", srcLineNo, tokenDiff.aHtml || " ", true);
+      srcHtml.push(attachReason(leftHtml, reasonByLine.get(srcLineNo) || ""));
       optHtml.push(renderLineHtml("changed", optLineNo, tokenDiff.bHtml || " "));
       continue;
     }
 
     if (row.type === "del") {
       srcLineNo += 1;
-      srcHtml.push(renderLineHtml("removed", srcLineNo, `<span class="token-bold">${escapeHtml(row.src || "")}</span>`));
+      const leftHtml = renderLineHtml("removed", srcLineNo, `<span class="token-bold">${highlightGcodeHtml(row.src || "")}</span>`, true);
+      srcHtml.push(attachReason(leftHtml, reasonByLine.get(srcLineNo) || ""));
       optHtml.push(renderLineHtml("", 0, ""));
       continue;
     }
@@ -745,7 +874,7 @@ function renderDiff(source, optimized) {
     if (row.type === "add") {
       optLineNo += 1;
       srcHtml.push(renderLineHtml("", 0, ""));
-      optHtml.push(renderLineHtml("added", optLineNo, `${escapeHtml(row.opt || "")}`));
+      optHtml.push(renderLineHtml("added", optLineNo, `${highlightGcodeHtml(row.opt || "")}`));
     }
   }
 
@@ -798,10 +927,53 @@ function readOptions() {
     removeComments: els.removeComments.checked,
     normalizeFeedRates: els.normalizeFeedRates.checked,
     removeDuplicateCoordinates: els.removeDuplicateCoordinates.checked,
+    optimizationMode: els.optimizationMode.value,
+    machineRateEURPerHour: Number(els.machineRate.value),
+    jobsPerDay: Number(els.jobsPerDay.value),
+    workDaysPerMonth: Number(els.workDaysPerMonth.value),
   };
 }
 
-function render() {
+function renderOptimizationMetricList(metrics) {
+  if (!els.optimizationMetricList) {
+    return;
+  }
+  const rows = [
+    ["Duplicate moves removed", metrics?.duplicateMovesRemoved],
+    ["Redundant Z removed", metrics?.redundantZRemoved],
+    ["Duplicate coordinates removed", metrics?.duplicateCoordinatesRemoved],
+    ["Redundant rapids removed", metrics?.redundantRapidsRemoved],
+    ["Air cutting removed", metrics?.airCutsRemoved],
+    ["Rapids merged", metrics?.rapidsMerged],
+    ["Comments/blanks removed", metrics?.commentsRemoved],
+  ];
+
+  els.optimizationMetricList.innerHTML = rows
+    .map(([label, value]) => `<div class="metric-item"><b>${escapeHtml(label)}</b><span>${Number.isFinite(value) ? value : 0}</span></div>`)
+    .join("");
+}
+
+async function requestOptimizeFromServer(source, options) {
+  const response = await fetch("/api/optimize", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      gcodeText: source,
+      options,
+    }),
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error || `API error (${response.status})`);
+  }
+  return payload;
+}
+
+async function render() {
+  const currentSequence = ++renderSequence;
   const source = els.sourceCode.value;
   if (!source.trim()) {
     els.optimizedCode.value = "";
@@ -812,14 +984,66 @@ function render() {
     els.originalTimeStats.textContent = "-";
     els.optimizedTimeStats.textContent = "-";
     els.timeSavedStats.textContent = "-";
+    els.rapidBreakdownStats.textContent = "-";
+    els.cuttingBreakdownStats.textContent = "-";
+    els.overheadBreakdownStats.textContent = "-";
+    els.moneySavedStats.textContent = "-";
+    els.moneyDailyStats.textContent = "-";
+    els.moneyMonthlyStats.textContent = "-";
+    els.moneyYearlyStats.textContent = "-";
+    els.roiStats.textContent = "-";
+    if (els.optimizationMetricList) {
+      els.optimizationMetricList.innerHTML = "";
+    }
+    renderWarnings([]);
+    setEngineStatus("api");
     els.sourcePreview.textContent = "";
     els.optimizedPreview.textContent = "";
     els.downloadBtn.disabled = true;
     return;
   }
 
+  const options = readOptions();
   try {
-    const optimized = optimizeGcode(source, readOptions());
+    let optimized = "";
+    let originalSeconds;
+    let optimizedSeconds;
+    let backendStats = null;
+    let removedEntries = [];
+    let warnings = [];
+
+    try {
+      const apiPayload = await requestOptimizeFromServer(source, options);
+      if (typeof apiPayload.optimized === "string") {
+        optimized = apiPayload.optimized;
+      }
+      if (apiPayload.stats && typeof apiPayload.stats === "object") {
+        backendStats = apiPayload.stats;
+        if (Number.isFinite(apiPayload.stats.originalCycleTimeSeconds)) {
+          originalSeconds = apiPayload.stats.originalCycleTimeSeconds;
+        }
+        if (Number.isFinite(apiPayload.stats.optimizedCycleTimeSeconds)) {
+          optimizedSeconds = apiPayload.stats.optimizedCycleTimeSeconds;
+        }
+      }
+      if (Array.isArray(apiPayload.removedEntries)) {
+        removedEntries = apiPayload.removedEntries;
+      }
+      if (Array.isArray(apiPayload.warnings)) {
+        warnings = apiPayload.warnings;
+      }
+      setEngineStatus("api");
+    } catch (serverError) {
+      console.warn("Server optimize unavailable, using local fallback.", serverError);
+      optimized = optimizeGcode(source, options);
+      setEngineStatus("fallback", "local");
+      warnings = [];
+    }
+
+    if (currentSequence !== renderSequence) {
+      return;
+    }
+
     const fallback = source.trim();
     const safeOutput = optimized || fallback;
     els.optimizedCode.value = safeOutput;
@@ -827,20 +1051,53 @@ function render() {
     const a = computeStats(source);
     const b = computeStats(safeOutput);
     const savings = a.bytes > 0 ? (((a.bytes - b.bytes) / a.bytes) * 100) : 0;
-    const originalSeconds = estimateMachiningTimeSeconds(source);
-    const optimizedSeconds = estimateMachiningTimeSeconds(safeOutput);
+    if (!Number.isFinite(originalSeconds)) {
+      originalSeconds = estimateMachiningTimeSeconds(source);
+    }
+    if (!Number.isFinite(optimizedSeconds)) {
+      optimizedSeconds = estimateMachiningTimeSeconds(safeOutput);
+    }
     const timeSavedSeconds = originalSeconds - optimizedSeconds;
+    const savedPercent = originalSeconds > 0 ? (timeSavedSeconds / originalSeconds) * 100 : 0;
+    lastRemovedEntries = removedEntries;
+    lastStats = backendStats;
 
     els.originalStats.textContent = statsToString(a);
     els.optimizedStats.textContent = statsToString(b);
     els.reductionStats.textContent = `${savings.toFixed(2)}% manja datoteka (${a.bytes - b.bytes}B)`;
     els.originalTimeStats.textContent = formatSeconds(originalSeconds);
     els.optimizedTimeStats.textContent = formatSeconds(optimizedSeconds);
-    els.timeSavedStats.textContent =
-      timeSavedSeconds >= 0
-        ? `${formatSeconds(timeSavedSeconds)} manje`
-        : `${formatSeconds(Math.abs(timeSavedSeconds))} vise`;
-    renderDiff(source, safeOutput);
+    if (Math.abs(timeSavedSeconds) < 0.001) {
+      els.timeSavedStats.textContent = "~0.000s (0.00%)";
+    } else if (timeSavedSeconds >= 0) {
+      els.timeSavedStats.textContent = `${formatSeconds(timeSavedSeconds)} manje (${savedPercent.toFixed(2)}%)`;
+    } else {
+      els.timeSavedStats.textContent = `${formatSeconds(Math.abs(timeSavedSeconds))} vise (${Math.abs(savedPercent).toFixed(2)}%)`;
+    }
+    if (backendStats) {
+      els.rapidBreakdownStats.textContent = `${formatSeconds(backendStats.originalRapidSeconds || 0)} / ${formatSeconds(backendStats.optimizedRapidSeconds || 0)}`;
+      els.cuttingBreakdownStats.textContent = `${formatSeconds(backendStats.originalCuttingSeconds || 0)} / ${formatSeconds(backendStats.optimizedCuttingSeconds || 0)}`;
+      els.overheadBreakdownStats.textContent = `${formatSeconds(backendStats.originalOverheadSeconds || 0)} / ${formatSeconds(backendStats.optimizedOverheadSeconds || 0)}`;
+      els.moneySavedStats.textContent = formatCurrency(backendStats.moneySavedEUR);
+      els.moneyDailyStats.textContent = formatCurrency(backendStats.moneySavedDailyEUR);
+      els.moneyMonthlyStats.textContent = formatCurrency(backendStats.moneySavedMonthlyEUR);
+      els.moneyYearlyStats.textContent = formatCurrency(backendStats.moneySavedYearlyEUR);
+      els.roiStats.textContent = backendStats.roiDays === null ? "-" : `${backendStats.roiDays} d`;
+      renderOptimizationMetricList(backendStats.optimizationMetrics);
+      renderWarnings(warnings);
+    } else {
+      els.rapidBreakdownStats.textContent = "-";
+      els.cuttingBreakdownStats.textContent = "-";
+      els.overheadBreakdownStats.textContent = "-";
+      els.moneySavedStats.textContent = "-";
+      els.moneyDailyStats.textContent = "-";
+      els.moneyMonthlyStats.textContent = "-";
+      els.moneyYearlyStats.textContent = "-";
+      els.roiStats.textContent = "-";
+      renderOptimizationMetricList(null);
+      renderWarnings(warnings);
+    }
+    renderDiff(source, safeOutput, removedEntries);
     els.downloadBtn.disabled = !safeOutput;
   } catch (error) {
     console.error("Optimize error:", error);
@@ -852,6 +1109,17 @@ function render() {
     els.originalTimeStats.textContent = "-";
     els.optimizedTimeStats.textContent = "-";
     els.timeSavedStats.textContent = "-";
+    els.rapidBreakdownStats.textContent = "-";
+    els.cuttingBreakdownStats.textContent = "-";
+    els.overheadBreakdownStats.textContent = "-";
+    els.moneySavedStats.textContent = "-";
+    els.moneyDailyStats.textContent = "-";
+    els.moneyMonthlyStats.textContent = "-";
+    els.moneyYearlyStats.textContent = "-";
+    els.roiStats.textContent = "-";
+    renderOptimizationMetricList(null);
+    renderWarnings([]);
+    setEngineStatus("fallback", "error");
     els.sourcePreview.textContent = source;
     els.optimizedPreview.textContent = source;
     els.downloadBtn.disabled = false;
@@ -882,6 +1150,67 @@ function downloadOptimized() {
   const a = document.createElement("a");
   a.href = url;
   a.download = "optimized.gcode";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function copyOptimizedToClipboard() {
+  const content = els.optimizedCode.value;
+  if (!content) {
+    return;
+  }
+  await navigator.clipboard.writeText(content);
+}
+
+function exportComparisonCsv() {
+  const source = els.sourceCode.value || "";
+  const optimized = els.optimizedCode.value || "";
+  const sourceLines = source.replace(/\r\n/g, "\n").split("\n");
+  const optimizedLines = optimized.replace(/\r\n/g, "\n").split("\n");
+  const max = Math.max(sourceLines.length, optimizedLines.length);
+  const rows = ["line,original,optimized"];
+  for (let i = 0; i < max; i += 1) {
+    const o = (sourceLines[i] || "").replaceAll('"', '""');
+    const n = (optimizedLines[i] || "").replaceAll('"', '""');
+    rows.push(`${i + 1},"${o}","${n}"`);
+  }
+  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "comparison.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportReport() {
+  const lines = [
+    "CAMOutput Optimization Report",
+    `Generated: ${new Date().toISOString()}`,
+    `Original: ${els.originalStats.textContent}`,
+    `Optimized: ${els.optimizedStats.textContent}`,
+    `Reduction: ${els.reductionStats.textContent}`,
+    `Time Saved: ${els.timeSavedStats.textContent}`,
+    `Money/Job: ${els.moneySavedStats.textContent}`,
+    `Daily: ${els.moneyDailyStats.textContent}`,
+    `Monthly: ${els.moneyMonthlyStats.textContent}`,
+    `Yearly: ${els.moneyYearlyStats.textContent}`,
+    `ROI: ${els.roiStats.textContent}`,
+    "",
+    "Removed line reasons:",
+    ...(Array.isArray(lastRemovedEntries)
+      ? lastRemovedEntries.map((entry) => `L${entry.line}: ${(entry.reasons || []).join("; ") || "Removed"}`)
+      : []),
+  ];
+  const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "optimization-report.txt";
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -924,6 +1253,11 @@ function init() {
 
   els.optimizeBtn.addEventListener("click", render);
   els.downloadBtn.addEventListener("click", downloadOptimized);
+  els.copyBtn.addEventListener("click", async () => {
+    await copyOptimizedToClipboard();
+  });
+  els.csvBtn.addEventListener("click", exportComparisonCsv);
+  els.reportBtn.addEventListener("click", exportReport);
 
   for (const control of [
     els.removeRedundantMoves,
@@ -932,6 +1266,10 @@ function init() {
     els.removeComments,
     els.normalizeFeedRates,
     els.removeDuplicateCoordinates,
+    els.optimizationMode,
+    els.machineRate,
+    els.jobsPerDay,
+    els.workDaysPerMonth,
   ]) {
     control.addEventListener("change", render);
   }

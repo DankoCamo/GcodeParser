@@ -4,26 +4,46 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CAMOutput G-Code Optimizer</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/preview/styles.css?v=20260313-3">
 </head>
-<body>
-  <main class="page">
-    <header class="topbar card glass">
-      <div class="brand">
-        <div class="logo">⚙</div>
-        <div>
-          <h1>CAMOutput G-Code Optimizer</h1>
-          <p>Uploadaj G-code i generiraj optimiziranu verziju u jednom kliku.</p>
+<body data-ui-version="v2026.03.13-3">
+  <div class="app-shell">
+    <!-- ─── TOP NAV ─── -->
+    <nav class="topnav">
+      <div class="topnav-left">
+        <div class="app-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <div class="app-title">
+          <h1>CAMOutput UI v3</h1>
+          <span class="badge">G-Code Optimizer</span>
         </div>
       </div>
-      <button id="downloadBtn" class="btn primary" disabled>Download Optimized</button>
-    </header>
+      <div class="topnav-right">
+        <span id="engineStatus" class="engine-badge">Engine: API</span>
+        <button id="downloadBtn" class="btn-action" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download
+        </button>
+      </div>
+    </nav>
 
-    <section class="layout">
-      <section class="left-col">
-        <div class="card panel">
-          <h2>Machine Configuration</h2>
-          <div class="field-grid">
+    <!-- ─── MAIN ─── -->
+    <main class="main-grid">
+
+      <!-- LEFT: Content -->
+      <div class="content-col">
+
+        <!-- Machine Config -->
+        <section class="card">
+          <div class="card-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+            <h2>Machine Configuration</h2>
+          </div>
+          <div class="field-row">
             <label class="field">
               <span>Machine Model</span>
               <select id="machineModel">
@@ -52,106 +72,154 @@
               </select>
             </label>
           </div>
-        </div>
+        </section>
 
-        <div class="card panel">
-          <h2>Input</h2>
+        <!-- Input -->
+        <section class="card">
+          <div class="card-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+            <h2>Input</h2>
+          </div>
           <div class="actions-row">
-            <label class="btn" for="fileInput">Upload File</label>
-            <button id="pasteDemoBtn" class="btn ghost">Paste Demo Code</button>
+            <label class="btn-secondary" for="fileInput">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              Upload File
+            </label>
+            <button id="pasteDemoBtn" class="btn-ghost">Paste Demo</button>
           </div>
           <input id="fileInput" type="file" accept=".gcode,.nc,.tap,.mpf,.txt" hidden>
           <textarea id="sourceCode" spellcheck="false" hidden></textarea>
-
           <label id="dropzone" class="dropzone" for="fileInput">
-            <strong>Drag & drop G-code datoteku</strong>
+            <div class="dropzone-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+            </div>
+            <strong>Drag &amp; drop G-code datoteku</strong>
             <span>Podržano: .nc, .gcode, .tap, .mpf, .txt</span>
           </label>
-        </div>
+        </section>
 
-        <div class="card panel">
-          <h2>Output</h2>
-          <div class="compare-head">
-            <span>Original vs Optimized (bold = izmijenjeno)</span>
+        <!-- Output -->
+        <section class="card">
+          <div class="card-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <h2>Output</h2>
+            <span class="compare-label">bold = izmijenjeno</span>
           </div>
           <div class="compare-grid">
             <article class="code-pane">
-              <h3>Original</h3>
+              <div class="pane-tab">Original</div>
               <pre id="sourcePreview" class="code-view"></pre>
             </article>
             <article class="code-pane">
-              <h3>Optimized</h3>
+              <div class="pane-tab pane-tab--opt">Optimized</div>
               <pre id="optimizedPreview" class="code-view"></pre>
             </article>
           </div>
           <textarea id="optimizedCode" spellcheck="false" readonly hidden></textarea>
-        </div>
-      </section>
+        </section>
+      </div>
 
-      <aside class="card panel right-col">
-        <h2>Optimization Options</h2>
-
-        <div class="option-block">
-          <div class="option-head">
-            <label for="feedScale">Feed Rate Scale (F)</label>
-            <output id="feedScaleOut">100%</output>
+      <!-- RIGHT: Sidebar -->
+      <aside class="sidebar-col">
+        <div class="card sidebar-card">
+          <div class="card-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <h2>Options</h2>
           </div>
-          <input id="feedScale" type="range" min="10" max="200" value="100">
-        </div>
 
-        <div class="option-block">
-          <div class="option-head">
-            <label for="spindleScale">Spindle Speed Scale (S)</label>
-            <output id="spindleScaleOut">100%</output>
+          <label class="field mode-field">
+            <span>Optimization Mode</span>
+            <select id="optimizationMode">
+              <option value="conservative" selected>Conservative (safe)</option>
+              <option value="aggressive">Aggressive (max optimize)</option>
+            </select>
+          </label>
+
+          <div class="slider-block">
+            <div class="slider-head"><span>Feed Rate Scale (F)</span><output id="feedScaleOut">100%</output></div>
+            <input id="feedScale" type="range" min="10" max="200" value="100">
           </div>
-          <input id="spindleScale" type="range" min="10" max="200" value="100">
+
+          <div class="slider-block">
+            <div class="slider-head"><span>Spindle Speed Scale (S)</span><output id="spindleScaleOut">100%</output></div>
+            <input id="spindleScale" type="range" min="10" max="200" value="100">
+          </div>
+
+          <div class="field-row finance-row">
+            <label class="field">
+              <span>Machine EUR/h</span>
+              <input id="machineRate" type="number" min="1" step="1" value="80">
+            </label>
+            <label class="field">
+              <span>Jobs/Day</span>
+              <input id="jobsPerDay" type="number" min="1" step="1" value="5">
+            </label>
+            <label class="field">
+              <span>Days/Month</span>
+              <input id="workDaysPerMonth" type="number" min="1" step="1" value="22">
+            </label>
+          </div>
+
+          <div class="toggles">
+            <label class="toggle"><input id="removeRedundantMoves" type="checkbox" checked><span>Remove Redundant Moves</span></label>
+            <label class="toggle"><input id="optimizeRapidTraverse" type="checkbox" checked><span>Optimize Rapid Traverse</span></label>
+            <label class="toggle"><input id="smoothRapidTraverses" type="checkbox" checked><span>Smooth Rapid Traverses</span></label>
+            <label class="toggle"><input id="removeComments" type="checkbox" checked><span>Remove Comments &amp; Blanks</span></label>
+            <label class="toggle"><input id="normalizeFeedRates" type="checkbox" checked><span>Normalize Feed Rates</span></label>
+            <label class="toggle"><input id="removeDuplicateCoordinates" type="checkbox" checked><span>Remove Dup. Coordinates</span></label>
+          </div>
+
+          <button id="optimizeBtn" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Optimize Now
+          </button>
+
+          <div class="actions-row export-row">
+            <button id="copyBtn" class="btn-ghost" type="button">Copy Optimized</button>
+            <button id="csvBtn" class="btn-ghost" type="button">Export CSV</button>
+            <button id="reportBtn" class="btn-ghost" type="button">Export Report</button>
+          </div>
         </div>
 
-        <label class="toggle"><input id="removeRedundantMoves" type="checkbox" checked><span>Remove Redundant Moves</span></label>
-        <label class="toggle"><input id="optimizeRapidTraverse" type="checkbox" checked><span>Optimize Rapid Traverse</span></label>
-        <label class="toggle"><input id="smoothRapidTraverses" type="checkbox" checked><span>Smooth Rapid Traverses</span></label>
-        <label class="toggle"><input id="removeComments" type="checkbox" checked><span>Remove Comments & Empty Lines</span></label>
-        <label class="toggle"><input id="normalizeFeedRates" type="checkbox" checked><span>Normalize Feed Rates</span></label>
-        <label class="toggle"><input id="removeDuplicateCoordinates" type="checkbox" checked><span>Remove Duplicate Coordinates</span></label>
+        <!-- Stats -->
+        <div class="card sidebar-card">
+          <div class="card-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <h2>Statistics</h2>
+          </div>
+          <div class="stats-grid">
+            <div class="stat"><span class="stat-label">Original</span><span class="stat-value" id="originalStats">-</span></div>
+            <div class="stat"><span class="stat-label">Optimized</span><span class="stat-value" id="optimizedStats">-</span></div>
+            <div class="stat stat--accent"><span class="stat-label">Reduction</span><span class="stat-value" id="reductionStats">-</span></div>
+            <div class="stat"><span class="stat-label">Changes</span><span class="stat-value" id="changesStats">-</span></div>
+            <div class="stat"><span class="stat-label">Time Original</span><span class="stat-value" id="originalTimeStats">-</span></div>
+            <div class="stat"><span class="stat-label">Time Optimized</span><span class="stat-value" id="optimizedTimeStats">-</span></div>
+            <div class="stat stat--accent"><span class="stat-label">Time Saved</span><span class="stat-value" id="timeSavedStats">-</span></div>
+            <div class="stat"><span class="stat-label">Rapid Time (Orig/Opt)</span><span class="stat-value" id="rapidBreakdownStats">-</span></div>
+            <div class="stat"><span class="stat-label">Cutting Time (Orig/Opt)</span><span class="stat-value" id="cuttingBreakdownStats">-</span></div>
+            <div class="stat"><span class="stat-label">Overhead (Orig/Opt)</span><span class="stat-value" id="overheadBreakdownStats">-</span></div>
+            <div class="stat"><span class="stat-label">Money/Job</span><span class="stat-value" id="moneySavedStats">-</span></div>
+            <div class="stat"><span class="stat-label">Daily</span><span class="stat-value" id="moneyDailyStats">-</span></div>
+            <div class="stat"><span class="stat-label">Monthly</span><span class="stat-value" id="moneyMonthlyStats">-</span></div>
+            <div class="stat"><span class="stat-label">Yearly</span><span class="stat-value" id="moneyYearlyStats">-</span></div>
+            <div class="stat"><span class="stat-label">ROI Days</span><span class="stat-value" id="roiStats">-</span></div>
+          </div>
+          <div class="metric-list" id="optimizationMetricList"></div>
 
-        <button id="optimizeBtn" class="btn primary full">Optimize Now</button>
+          <div class="warnings-box">
+            <div class="warnings-head">
+              <span>Safety Warnings</span>
+              <span id="warningCount" class="warning-count">0</span>
+            </div>
+            <div id="warningList" class="warning-list"></div>
+          </div>
 
-        <div class="stats-grid">
-          <article class="mini-stat">
-            <h3>Original</h3>
-            <p id="originalStats">-</p>
-          </article>
-          <article class="mini-stat">
-            <h3>Optimized</h3>
-            <p id="optimizedStats">-</p>
-          </article>
-          <article class="mini-stat accent">
-            <h3>Reduction</h3>
-            <p id="reductionStats">-</p>
-          </article>
-          <article class="mini-stat">
-            <h3>Changes</h3>
-            <p id="changesStats">-</p>
-          </article>
-          <article class="mini-stat">
-            <h3>Estimated Time Original</h3>
-            <p id="originalTimeStats">-</p>
-          </article>
-          <article class="mini-stat">
-            <h3>Estimated Time Optimized</h3>
-            <p id="optimizedTimeStats">-</p>
-          </article>
-          <article class="mini-stat accent">
-            <h3>Time Saved (Machining)</h3>
-            <p id="timeSavedStats">-</p>
-          </article>
+          <p class="footnote">Napomena: "Optimize Rapid Traverse" koristi heuristiku za uzastopne G0 točke.</p>
         </div>
-
-        <p class="footnote">Napomena: "Optimize Rapid Traverse" koristi konzervativnu heuristiku na uzastopnim G0 točkama.</p>
       </aside>
-    </section>
-  </main>
+    </main>
+  </div>
 
-  <script src="app.js"></script>
+  <script src="/preview/app.js"></script>
 </body>
 </html>
